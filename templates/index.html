@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Predicción de rendimiento agrícola</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, sans-serif;
+            background: #eef3f8;
+            color: #263238;
+        }
+
+        body { margin: 0; }
+
+        .container {
+            width: min(760px, calc(100% - 32px));
+            margin: 35px auto;
+            padding: 28px;
+            box-sizing: border-box;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgb(0 0 0 / 10%);
+        }
+
+        h1 { margin: 0 0 8px; color: #1f4e79; }
+
+        .intro {
+            margin-bottom: 22px;
+            color: #455a64;
+            line-height: 1.5;
+        }
+
+        form {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .ayuda {
+            display: block;
+            margin-top: 4px;
+            color: #607d8b;
+            font-size: 0.82rem;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #b8c2cc;
+            border-radius: 6px;
+            font: inherit;
+        }
+
+        .full { grid-column: 1 / -1; }
+
+        button {
+            border: 0;
+            background: #1f4e79;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        button:hover { background: #163a59; }
+
+        .mensaje {
+            margin-top: 24px;
+            padding: 16px;
+            border-left: 5px solid;
+        }
+
+        .resultado {
+            border-color: #2e7d32;
+            background: #e8f5e9;
+            color: #1b5e20;
+            font-size: 18px;
+        }
+
+        .error {
+            border-color: #c62828;
+            background: #fdecea;
+            color: #b71c1c;
+        }
+
+        @media (max-width: 650px) {
+            .container { padding: 20px; }
+            form { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<main class="container">
+    <h1>Predicción de rendimiento agrícola</h1>
+    <p class="intro">
+        Ingrese las seis variables utilizadas por el modelo Ridge. Los campos
+        vacíos serán imputados por el pipeline antes de codificar, escalar y predecir.
+    </p>
+
+    <form method="post" novalidate>
+        <div>
+            <label for="Fertilizer_Used_kg">Fertilizante utilizado (kg)</label>
+            <input id="Fertilizer_Used_kg" name="Fertilizer_Used_kg" type="number" step="any" min="0" value="{{ valores.get('Fertilizer_Used_kg', '') }}">
+            <span class="ayuda">Opcional; debe ser igual o mayor que cero.</span>
+        </div>
+
+        <div>
+            <label for="Rainfall_mm">Lluvia (mm)</label>
+            <input id="Rainfall_mm" name="Rainfall_mm" type="number" step="any" min="0" value="{{ valores.get('Rainfall_mm', '') }}">
+            <span class="ayuda">Opcional; debe ser igual o mayor que cero.</span>
+        </div>
+
+        <div>
+            <label for="Temperature_C">Temperatura (°C)</label>
+            <input id="Temperature_C" name="Temperature_C" type="number" step="any" min="-50" max="60" value="{{ valores.get('Temperature_C', '') }}">
+            <span class="ayuda">Opcional; rango admitido: -50 a 60 °C.</span>
+        </div>
+
+        <div>
+            <label for="Previous_Crop">Cultivo anterior</label>
+            <select id="Previous_Crop" name="Previous_Crop">
+                <option value="" {% if not valores.get('Previous_Crop') %}selected{% endif %}>Valor faltante (imputar)</option>
+                <option value="Rice" {% if valores.get('Previous_Crop') == 'Rice' %}selected{% endif %}>Rice</option>
+                <option value="Barley" {% if valores.get('Previous_Crop') == 'Barley' %}selected{% endif %}>Barley</option>
+                <option value="Wheat" {% if valores.get('Previous_Crop') == 'Wheat' %}selected{% endif %}>Wheat</option>
+                <option value="Maize" {% if valores.get('Previous_Crop') == 'Maize' %}selected{% endif %}>Maize</option>
+                <option value="Sin_cultivo_previo" {% if valores.get('Previous_Crop') == 'Sin_cultivo_previo' %}selected{% endif %}>Sin cultivo previo</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="Humidity_pct">Humedad (%)</label>
+            <input id="Humidity_pct" name="Humidity_pct" type="number" step="any" min="0" max="100" value="{{ valores.get('Humidity_pct', '') }}">
+            <span class="ayuda">Opcional; rango admitido: 0 a 100 %.</span>
+        </div>
+
+        <div>
+            <label for="Region">Región</label>
+            <select id="Region" name="Region">
+                <option value="" {% if not valores.get('Region') %}selected{% endif %}>Valor faltante (imputar)</option>
+                <option value="Region_A" {% if valores.get('Region') == 'Region_A' %}selected{% endif %}>Region_A</option>
+                <option value="Region_B" {% if valores.get('Region') == 'Region_B' %}selected{% endif %}>Region_B</option>
+                <option value="Region_C" {% if valores.get('Region') == 'Region_C' %}selected{% endif %}>Region_C</option>
+                <option value="Region_D" {% if valores.get('Region') == 'Region_D' %}selected{% endif %}>Region_D</option>
+            </select>
+        </div>
+
+        <div class="full">
+            <button type="submit">Predecir rendimiento</button>
+        </div>
+    </form>
+
+    {% if resultado is not none %}
+        <div class="mensaje resultado" role="status">
+            Rendimiento estimado:
+            <strong>{{ "%.2f"|format(resultado) }} toneladas por hectárea</strong>.
+        </div>
+    {% endif %}
+
+    {% if error %}
+        <div class="mensaje error" role="alert">{{ error }}</div>
+    {% endif %}
+</main>
+</body>
+</html>
