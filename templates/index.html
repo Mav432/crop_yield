@@ -101,7 +101,8 @@
     <h1>Predicción de rendimiento agrícola</h1>
     <p class="intro">
         Ingrese las seis variables utilizadas por el modelo Ridge. Los campos
-        vacíos serán imputados por el pipeline antes de codificar, escalar y predecir.
+        numéricos vacíos serán imputados por el pipeline antes de codificar,
+        escalar y predecir.
     </p>
 
     <form method="post" novalidate>
@@ -126,13 +127,13 @@
         <div>
             <label for="Previous_Crop">Cultivo anterior</label>
             <select id="Previous_Crop" name="Previous_Crop">
-                <option value="" {% if not valores.get('Previous_Crop') %}selected{% endif %}>Valor faltante (imputar)</option>
-                <option value="Rice" {% if valores.get('Previous_Crop') == 'Rice' %}selected{% endif %}>Rice</option>
-                <option value="Barley" {% if valores.get('Previous_Crop') == 'Barley' %}selected{% endif %}>Barley</option>
-                <option value="Wheat" {% if valores.get('Previous_Crop') == 'Wheat' %}selected{% endif %}>Wheat</option>
-                <option value="Maize" {% if valores.get('Previous_Crop') == 'Maize' %}selected{% endif %}>Maize</option>
-                <option value="Sin_cultivo_previo" {% if valores.get('Previous_Crop') == 'Sin_cultivo_previo' %}selected{% endif %}>Sin cultivo previo</option>
+                <option value="Sin_cultivo_previo" {% if not valores.get('Previous_Crop') or valores.get('Previous_Crop') == 'Sin_cultivo_previo' %}selected{% endif %}>Sin cultivo previo</option>
+                <option value="Rice" {% if valores.get('Previous_Crop') == 'Rice' %}selected{% endif %}>Arroz</option>
+                <option value="Barley" {% if valores.get('Previous_Crop') == 'Barley' %}selected{% endif %}>Cebada</option>
+                <option value="Wheat" {% if valores.get('Previous_Crop') == 'Wheat' %}selected{% endif %}>Trigo</option>
+                <option value="Maize" {% if valores.get('Previous_Crop') == 'Maize' %}selected{% endif %}>Maíz</option>
             </select>
+            <span class="ayuda">Seleccione el cultivo sembrado antes del cultivo actual.</span>
         </div>
 
         <div>
@@ -144,12 +145,12 @@
         <div>
             <label for="Region">Región</label>
             <select id="Region" name="Region">
-                <option value="" {% if not valores.get('Region') %}selected{% endif %}>Valor faltante (imputar)</option>
-                <option value="Region_A" {% if valores.get('Region') == 'Region_A' %}selected{% endif %}>Region_A</option>
-                <option value="Region_B" {% if valores.get('Region') == 'Region_B' %}selected{% endif %}>Region_B</option>
-                <option value="Region_C" {% if valores.get('Region') == 'Region_C' %}selected{% endif %}>Region_C</option>
-                <option value="Region_D" {% if valores.get('Region') == 'Region_D' %}selected{% endif %}>Region_D</option>
+                <option value="Region_A" {% if not valores.get('Region') or valores.get('Region') == 'Region_A' %}selected{% endif %}>Zona agrícola A</option>
+                <option value="Region_B" {% if valores.get('Region') == 'Region_B' %}selected{% endif %}>Zona agrícola B</option>
+                <option value="Region_C" {% if valores.get('Region') == 'Region_C' %}selected{% endif %}>Zona agrícola C</option>
+                <option value="Region_D" {% if valores.get('Region') == 'Region_D' %}selected{% endif %}>Zona agrícola D</option>
             </select>
+            <span class="ayuda">Seleccione la zona agrícola correspondiente al registro.</span>
         </div>
 
         <div class="full">

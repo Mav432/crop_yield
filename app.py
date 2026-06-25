@@ -1,14 +1,16 @@
 import logging
 import math
+import os
 from pathlib import Path
 
 import joblib
 import pandas as pd
-from flask import Flask, render_template, request
+from flask import Flask, redirect, render_template, request, session, url_for
 from sklearn import __version__ as sklearn_version
 
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "crop-yield-dev-secret")
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -121,54 +123,61 @@ def validar_rangos(datos):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    resultado = None
-    error = error_carga_modelo
-    valores = request.form.to_dict() if request.method == "POST" else {}
+    if request.method == "GET":
+        resultado = session.pop("resultado", None)
+        error_sesion = session.pop("error", None)
+        error = error_sesion if error_sesion is not None else error_carga_modelo
 
-    if request.method == "POST" and modelo is not None:
-        try:
-            datos = {
-                "Fertilizer_Used_kg": leer_numero("Fertilizer_Used_kg"),
-                "Rainfall_mm": leer_numero("Rainfall_mm"),
-                "Temperature_C": leer_numero("Temperature_C"),
-                "Previous_Crop": leer_categoria("Previous_Crop"),
-                "Humidity_pct": leer_numero("Humidity_pct"),
-                "Region": leer_categoria("Region"),
-            }
-            validar_rangos(datos)
+        return render_template(
+            "index.html",
+            resultado=resultado,
+            error=error,
+            valores={},
+        )
 
-            # El orden coincide con las seis características seleccionadas.
-            datos_usuario = pd.DataFrame(
-                [[datos[columna] for columna in COLUMNAS_MODELO]],
-                columns=COLUMNAS_MODELO,
+    if modelo is None:
+        session["error"] = error_carga_modelo
+        return redirect(url_for("index"))
+
+    try:
+        datos = {
+            "Fertilizer_Used_kg": leer_numero("Fertilizer_Used_kg"),
+            "Rainfall_mm": leer_numero("Rainfall_mm"),
+            "Temperature_C": leer_numero("Temperature_C"),
+            "Previous_Crop": leer_categoria("Previous_Crop"),
+            "Humidity_pct": leer_numero("Humidity_pct"),
+            "Region": leer_categoria("Region"),
+        }
+        validar_rangos(datos)
+
+        # El orden coincide con las seis características seleccionadas.
+        datos_usuario = pd.DataFrame(
+            [[datos[columna] for columna in COLUMNAS_MODELO]],
+            columns=COLUMNAS_MODELO,
+        )
+
+        prediccion = float(modelo.predict(datos_usuario)[0])
+        if not math.isfinite(prediccion):
+            raise ValueError("El pipeline produjo una predicción no válida.")
+        session["resultado"] = round(prediccion, 2)
+    except ValueError as exc:
+        session["error"] = str(exc)
+    except AttributeError as exc:
+        if "_fill_dtype" in str(exc):
+            session["error"] = (
+                "El pipeline fue cargado con una versión incompatible de "
+                "scikit-learn. Este archivo requiere scikit-learn==1.7.1."
             )
+        else:
+            logger.exception("Error de atributos durante la predicción")
+            session["error"] = f"No se pudo generar la predicción: {exc}"
+    except Exception as exc:
+        logger.exception("No se pudo generar la predicción")
+        session["error"] = f"No se pudo generar la predicción: {exc}"
 
-            prediccion = float(modelo.predict(datos_usuario)[0])
-            if not math.isfinite(prediccion):
-                raise ValueError("El pipeline produjo una predicción no válida.")
-            resultado = round(prediccion, 2)
-            error = None
-        except ValueError as exc:
-            error = str(exc)
-        except AttributeError as exc:
-            if "_fill_dtype" in str(exc):
-                error = (
-                    "El pipeline fue cargado con una versión incompatible de "
-                    "scikit-learn. Este archivo requiere scikit-learn==1.7.1."
-                )
-            else:
-                logger.exception("Error de atributos durante la predicción")
-                error = f"No se pudo generar la predicción: {exc}"
-        except Exception as exc:
-            logger.exception("No se pudo generar la predicción")
-            error = f"No se pudo generar la predicción: {exc}"
-
-    return render_template(
-        "index.html",
-        resultado=resultado,
-        error=error,
-        valores=valores,
-    )
+    # Redirige después de predecir para recargar la página, limpiar los inputs
+    # y evitar reenviar el formulario al actualizar el navegador.
+    return redirect(url_for("index"))
 
 
 if __name__ == "__main__":
