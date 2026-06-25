@@ -36,13 +36,21 @@ Abra `http://127.0.0.1:5000`. El archivo
 
 1. Publique el proyecto en un repositorio Git.
 2. En Render, cree un **Web Service** conectado al repositorio.
-3. Configure la variable de entorno `PYTHON_VERSION` con `3.10.20`.
-4. Use estos comandos:
+3. Use la configuración incluida en `render.yaml`, o configure manualmente:
 
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn app:app`
+   - Runtime: `Python`
+   - Python Version: `3.10.20`
+   - Build Command: `python -m pip install --upgrade pip && pip install -r requirements.txt`
+   - Start Command: `gunicorn app:app --bind 0.0.0.0:$PORT`
 
-5. Verifique que el archivo `.joblib` esté incluido en el repositorio y despliegue.
+4. Verifique que `pipeline_crop_yield_final.joblib` esté incluido en el
+   repositorio y despliegue.
+
+El archivo `requirements.txt` usa `--only-binary=:all:` para evitar que Render
+intente compilar paquetes científicos como `scipy` o `scikit-learn` desde fuente.
+Si Render ignora la versión de Python y usa una versión más nueva sin wheels
+compatibles, la instalación fallará temprano en lugar de intentar compilar con
+Fortran.
 
 Si se necesita regenerar el artefacto, debe hacerse ejecutando las celdas de
 entrenamiento y `joblib.dump` en `crop_yield_new.ipynb` con el entorno compatible.
